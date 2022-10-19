@@ -1,1 +1,1 @@
-# Lugiato-LefeverEquationSolver
+# Lugiato-Lefever Equation Solver
