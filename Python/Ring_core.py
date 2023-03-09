@@ -10,6 +10,7 @@ sns.set_style('whitegrid')
 
 class Ring:
     def __init__(self, ring_parameters) -> None:
+        # Retrieve ring parameters
         self.N = ring_parameters['N'] # Number of modes. It must be odd!
         self.n0 = ring_parameters['n0'] # Refractive index
         self.n2 = ring_parameters['n2'] # Nonlinear reftactive index [m^2/W]
@@ -28,7 +29,7 @@ class Ring:
         self.g = hbar * self.omega0**2 * c * self.n2 / (self.n0**2 * self.Veff) # Nonlinear coupling coefficient
         self.kappa = 2 * pi * self.kappa # Optical linewidth [rad/s]
         self.f = np.zeros(self.N) # Normalized pump field vector
-        self.f[int(self.N / 2) + 1] = np.sqrt((8 * self.g * self.eta / self.kappa**2) * (self.Pin / (hbar * self.omega0))) # Normalized pump field
+        self.f[int(self.N / 2)] = np.sqrt((8 * self.g * self.eta / self.kappa**2) * (self.Pin / (hbar * self.omega0))) # Normalized pump field
         self.D2 = 2 * pi * self.D2 # Second order dispersion [rad/s]
         self.d2 = (2 / self.kappa) * self.D2 # Normalized second order dispersion
         self.mu = np.arange(-(self.N - 1) / 2, ((self.N - 1) / 2) + 1, 1) # Mode numbers relative to the pumped mode
@@ -65,7 +66,7 @@ class Ring:
         theta[0] = theta0 if theta_forward.size == 0 else theta_forward[np.abs(dseta_forward - dseta_start).argmin()] # Store initial normalized variation of temperature
         aux = 1j if Effects == 'Thermal' else 0 # Auxiliary variable to consider or not the variation of temperature
         if Effects == 'Avoided mode crossings':
-            self.dint[int((self.N + 1) / 2) + mode_perturbated] = 0 # Perturbate integrated dispersion
+            self.dint[int(self.N / 2) + mode_perturbated] = 0 # Perturbate integrated dispersion
 
         # Iterate over all detuning values
         print('{} tuning: '.format('Forward' if amu_forward.size == 0 else 'Backward')) # Indicate if forward or backward tuning simulation
