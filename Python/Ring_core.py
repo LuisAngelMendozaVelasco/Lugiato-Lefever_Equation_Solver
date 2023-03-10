@@ -106,55 +106,53 @@ class Ring:
         ax1.set_ylim(0, np.max(avg_intr_int_fwrd) * 1.05)
         ax1.legend(loc='upper left')
 
+        def plot_optical_spectrum(dseta, amu, dseta_snap, ax, line_color='blue'):
+            index = np.abs(dseta - dseta_snap).argmin() # Index of dseta_snap value in dseta
+            omegamu = self.omega0 + 2 * pi * self.FSR * self.mu + (2 * pi * self.D2 * self.mu**2 / 2) # Resonance frequencies [rad/s]
+            freqmu = omegamu / (2 * pi) # Resonance frequencies [Hz]
+            fin = np.max(self.f) * np.ones(self.N) # Normalized pump field (vector)
+            fout = self.f - 2 * self.eta * np.abs(amu[index, :]) # Normalized output field
+            optical_spectrum = (np.abs(fout)**2 / np.abs(fin)**2) * self.Pin # Optical spectrum [W]
+            optical_spectrum = 10 * np.log10(1000 * optical_spectrum) # Optical spectrum [dBm]
+
+            ax.stem(freqmu * 1e-12, optical_spectrum, markerfmt=",", bottom=-30, linefmt=line_color)
+            ax.set_xlabel('Resonance frequencies [THz], $f_\mu$')
+            ax.set_ylabel('Optical spectrum [dBm]')
+            ax.set_xlim(freqmu[0] * 1e-12, freqmu[-1] * 1e-12)
+            ax.set_ylim(-30, 10 * np.log10(1000 * self.Pin) * 1.05)
+
+        def plot_intracavity_power(dseta, amu, dseta_snap, ax, line_color='blue'):
+            index = np.abs(dseta - dseta_snap).argmin() # Index of dseta_snap value in dseta
+            ring_circumference = np.linspace(-pi, pi, 4096) # Ring circumference from -pi to pi
+            temp = np.zeros_like(ring_circumference, dtype=np.complex_)
+            temp[np.int32(self.mu + (4096 / 2) + 1)] = amu[index, :] # Improve resolution considering more sampling points
+            intracavity_power = np.abs(fft(temp))**2 # Intracavity power [a. u.]
+
+            ax.plot(ring_circumference, intracavity_power, color=line_color)
+            ax.set_xlabel('Ring circumference [rad], $\phi$')
+            ax.set_ylabel('Intracavity power [a. u]')
+            ax.set_xlim(-pi, pi)
+            ax.set_ylim(0, np.max(intracavity_power) * 1.05)
+            ax.set_xticks([-pi, -pi/2, 0, pi/2, pi])
+            ax.set_xticklabels(['$-\pi$', '$-\pi$/2', '0', '$\pi$/2', '$\pi$'])
+
         # Plot forward optical spectrum
         ax2 = plt.subplot(312) if amu_backward.size == 0 else plt.subplot(323)
-        self.plot_optical_spectrum(dseta_forward, amu_forward, dseta_snap, ax2)
+        plot_optical_spectrum(dseta_forward, amu_forward, dseta_snap, ax2)
 
         # Plot forward intracavity power
         ax4 = plt.subplot(313) if amu_backward.size == 0 else plt.subplot(325)
-        self.plot_intracavity_power(dseta_forward, amu_forward, dseta_snap, ax4)
+        plot_intracavity_power(dseta_forward, amu_forward, dseta_snap, ax4)
 
         if amu_backward.size != 0:
             # Plot backward optical spectrum
             ax3 = plt.subplot(324)
-            self.plot_optical_spectrum(dseta_backward, amu_backward, dseta_snap, ax3, line_color='red')
+            plot_optical_spectrum(dseta_backward, amu_backward, dseta_snap, ax3, line_color='red')
 
             # Plot backward intracavity power
             ax5 = plt.subplot(326)
-            self.plot_intracavity_power(dseta_backward, amu_backward, dseta_snap, ax5, line_color='red')
+            plot_intracavity_power(dseta_backward, amu_backward, dseta_snap, ax5, line_color='red')
             
         fig.canvas.header_visible = False
         plt.tight_layout()
         plt.show()
-
-
-    def plot_optical_spectrum(self, dseta, amu, dseta_snap, ax, line_color='blue'):
-        index = np.abs(dseta - dseta_snap).argmin() # Index of dseta_snap value in dseta
-        omegamu = self.omega0 + 2 * pi * self.FSR * self.mu + (2 * pi * self.D2 * self.mu**2 / 2) # Resonance frequencies [rad/s]
-        freqmu = omegamu / (2 * pi) # Resonance frequencies [Hz]
-        fin = np.max(self.f) * np.ones(self.N) # Normalized pump field (vector)
-        fout = self.f - 2 * self.eta * np.abs(amu[index, :]) # Normalized output field
-        optical_spectrum = (np.abs(fout)**2 / np.abs(fin)**2) * self.Pin # Optical spectrum [W]
-        optical_spectrum = 10 * np.log10(1000 * optical_spectrum) # Optical spectrum [dBm]
-
-        ax.stem(freqmu * 1e-12, optical_spectrum, markerfmt=",", bottom=-30, linefmt=line_color)
-        ax.set_xlabel('Resonance frequencies [THz], $f_\mu$')
-        ax.set_ylabel('Optical spectrum [dBm]')
-        ax.set_xlim(freqmu[0] * 1e-12, freqmu[-1] * 1e-12)
-        ax.set_ylim(-30, 10 * np.log10(1000 * self.Pin) * 1.05)
-
-
-    def plot_intracavity_power(self, dseta, amu, dseta_snap, ax, line_color='blue'):
-        index = np.abs(dseta - dseta_snap).argmin() # Index of dseta_snap value in dseta
-        ring_circumference = np.linspace(-pi, pi, 4096) # Ring circumference from -pi to pi
-        temp = np.zeros_like(ring_circumference, dtype=np.complex_)
-        temp[np.int32(self.mu + (4096 / 2) + 1)] = amu[index, :] # Improve resolution considering more sampling points
-        intracavity_power = np.abs(fft(temp))**2 # Intracavity power [a. u.]
-
-        ax.plot(ring_circumference, intracavity_power, color=line_color)
-        ax.set_xlabel('Ring circumference [rad], $\phi$')
-        ax.set_ylabel('Intracavity power [a. u]')
-        ax.set_xlim(-pi, pi)
-        ax.set_ylim(0, np.max(intracavity_power) * 1.05)
-        ax.set_xticks([-pi, -pi/2, 0, pi/2, pi])
-        ax.set_xticklabels(['$-\pi$', '$-\pi$/2', '0', '$\pi$/2', '$\pi$'])
