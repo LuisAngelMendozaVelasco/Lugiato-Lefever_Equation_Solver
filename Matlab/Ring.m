@@ -124,18 +124,17 @@ classdef Ring
             if ~isempty(avg_intr_int_bwrd)
                 plot(dseta_backward, avg_intr_int_bwrd, Color="r", LineWidth=2);
                 xline(dseta_snap, Color="k", LineStyle="--", LineWidth=2);
-                legend({'Forward tuning', 'Backward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northeast");
+                legend({'Forward tuning', 'Backward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northwest");
             else
                 xline(dseta_snap, Color="k", LineStyle="--", LineWidth=2);
                 legend({'Forward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northeast");
-                
             end
             xlabel('Normalized detuning, $\zeta$', 'interpreter', 'latex');
             ylabel({'Average intracavity'; 'intensity [a. u.]'}); 
             xlim([min(dseta_forward), max(dseta_forward)]);
             ylim([0, max(avg_intr_int_fwrd) * 1.05]);
             grid minor;
-            set(gca, 'fontsize', 20);
+            set(gca, 'fontsize', 16);
             
             % Plot forward optical spectrum
             if ~isempty(amu_backward); subplot_ = subplot(3, 2, 3); else; subplot_ = subplot(3, 2, 3:4); end
@@ -171,7 +170,7 @@ classdef Ring
                 xlim([freqmu(1) * 1e-12, freqmu(end) * 1e-12]);
                 ylim([-30, 10 * log10(1000 * obj.Pin) * 1.05]);
                 grid minor;
-                set(gca, 'fontsize', 20);
+                set(gca, 'fontsize', 16);
             end
 
             function plot_intracavity_power(dseta, amu, dseta_snap, subplot_, line_color)
@@ -190,7 +189,7 @@ classdef Ring
                 xticks([-pi, -pi/2, 0, pi/2, pi]);
                 xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
                 grid minor;
-                set(gca, 'fontsize', 20);
+                set(gca, 'fontsize', 16);
             end
         end
     end
