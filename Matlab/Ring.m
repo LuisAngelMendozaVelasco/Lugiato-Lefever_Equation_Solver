@@ -4,6 +4,7 @@ classdef Ring
         hbar = 1.0545718176461565e-34; % Reduced Planck constant [W*s^2]
         N; n0; n2; FSR; lambda0; kappa; eta; Veff; D2; Pin; Tr; freq0; omega0; g; f; d2; mu; dint;
     end
+
     methods
         function obj = Ring(ring_parameters)
             % Retrieve ring parameters
@@ -31,6 +32,7 @@ classdef Ring
             obj.mu = -(obj.N - 1) / 2 : (obj.N - 1) / 2; % Mode numbers relative to the pumped mode
             obj.dint = (obj.d2 / 2) * obj.mu.^2; % Normalized integrated dispersion
         end
+
         function [dseta, amu, theta] = numerical_simulation(obj, parameters, simulation_options, varargin)
             % Retrieve simulation options
             Effects = simulation_options("Effects"); % None or "Thermal" or "Avoided mode crossings"
@@ -97,6 +99,98 @@ classdef Ring
                 damu_ = -(1 + 1i * (dseta_current + dseta_step * (tau / tau_step) + obj.dint.') - aux * theta_) .* amu_ + 1i * ifft(abs(fft(amu_)).^2 .* fft(amu_)) + obj.f.'; % LLE
                 dtheta_ = (2 / obj.kappa / tauT) * (n2T / obj.n2 * sum(abs(amu_).^2) - theta_); %Thermal equation
                 dy = [damu_; dtheta_];
+            end
+        end
+
+        function plot_results(obj, dseta_forward, amu_forward, dseta_snap, varargin)
+             % Retrive backward values if available
+            try
+                dseta_backward = varargin{1};
+                amu_backward = varargin{2};
+            catch
+                [dseta_backward, amu_backward] = deal([], []);
+            end
+ 
+            figure();
+            set(gcf, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]); %Set figure size
+
+            % Plot average intracavity intensity
+            avg_intr_int_fwrd = sum(abs(amu_forward).^2, 2); % Average intracavity intensity of forward tuning [a. u.]
+            if ~isempty(amu_backward); avg_intr_int_bwrd = sum(abs(amu_backward).^2, 2); else; avg_intr_int_bwrd = []; end % Average intracavity intensity of backward tuning [a. u.]
+            
+            subplot(3, 2, 1:2);
+            plot(dseta_forward, avg_intr_int_fwrd, Color="b", LineWidth=2);
+            hold on;
+            if ~isempty(avg_intr_int_bwrd)
+                plot(dseta_backward, avg_intr_int_bwrd, Color="r", LineWidth=2);
+                xline(dseta_snap, Color="k", LineStyle="--", LineWidth=2);
+                legend({'Forward tuning', 'Backward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northeast");
+            else
+                xline(dseta_snap, Color="k", LineStyle="--", LineWidth=2);
+                legend({'Forward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northeast");
+                
+            end
+            xlabel('Normalized detuning, $\zeta$', 'interpreter', 'latex');
+            ylabel({'Average intracavity'; 'intensity [a. u.]'}); 
+            xlim([min(dseta_forward), max(dseta_forward)]);
+            ylim([0, max(avg_intr_int_fwrd) * 1.05]);
+            grid minor;
+            set(gca, 'fontsize', 20);
+            
+            % Plot forward optical spectrum
+            if ~isempty(amu_backward); subplot_ = subplot(3, 2, 3); else; subplot_ = subplot(3, 2, 3:4); end
+            plot_optical_spectrum(dseta_forward, amu_forward, dseta_snap, subplot_, "b");
+
+            % Plot forward intracavity power
+            if ~isempty(amu_backward); subplot_ = subplot(3, 2, 5); else; subplot_ = subplot(3, 2, 5:6); end
+            plot_intracavity_power(dseta_forward, amu_forward, dseta_snap, subplot_, "b");
+
+            if ~isempty(amu_backward)
+                % Plot backward optical spectrum
+                subplot_ = subplot(3, 2, 4);
+                plot_optical_spectrum(dseta_backward, amu_backward, dseta_snap, subplot_, "r");
+
+                % Plot backward intracavity power
+                subplot_ = subplot(3, 2, 6);
+                plot_intracavity_power(dseta_backward, amu_backward, dseta_snap, subplot_, "r");
+            end
+
+            function plot_optical_spectrum(dseta, amu, dseta_snap, subplot_, line_color)
+                [~, index] = min(abs(dseta - dseta_snap)); % Index of dseta_snap value in dseta
+                omegamu = obj.omega0 + 2 * pi * obj.FSR * obj.mu + (2 * pi * obj.D2 * obj.mu.^2 / 2); % Resonance frequencies [rad/s]
+                freqmu = omegamu / (2 * pi); % Resonance frequencies [Hz]
+                fin = max(obj.f) * ones(1, obj.N); % Normalized pump field (vector)
+                fout = obj.f - 2 * obj.eta * abs(amu(index, :)); % Normalized output field
+                optical_spectrum = (abs(fout).^2 ./ abs(fin).^2) * obj.Pin; % Optical spectrum [W]
+                optical_spectrum = 10 * log10(1000 * optical_spectrum); % Optical spectrum [dBm]
+                
+                subplot_;
+                stem(freqmu * 1e-12, optical_spectrum, 'Marker', 'none', BaseValue=-30, Color=line_color)
+                xlabel('Resonance frequencies [THz], $f_\mu$', 'interpreter', 'latex');
+                ylabel({'Optical'; 'spectrum [dBm]'});
+                xlim([freqmu(1) * 1e-12, freqmu(end) * 1e-12]);
+                ylim([-30, 10 * log10(1000 * obj.Pin) * 1.05]);
+                grid minor;
+                set(gca, 'fontsize', 20);
+            end
+
+            function plot_intracavity_power(dseta, amu, dseta_snap, subplot_, line_color)
+                [~, index] = min(abs(dseta - dseta_snap)); % Index of dseta_snap value in dseta
+                ring_circumference = linspace(-pi, pi, 4096); % Ring circumference from -pi to pi
+                temp = zeros(1, 4096);
+                temp(obj.mu + 4096 / 2 + 1) = amu(index, :); % Improve resolution considering more sampling points
+                intracavity_power = abs(fft(temp)).^2; % Intracavity power [a. u.]
+
+                subplot_;
+                plot(ring_circumference, intracavity_power, Color=line_color, LineWidth=2);
+                xlabel('Ring circumference [rad], $\phi$', 'interpreter', 'latex');
+                ylabel({'Intracavity'; 'power [a. u]'});
+                xlim([-pi, pi]);
+                ylim([0, max(intracavity_power) * 1.05])
+                xticks([-pi, -pi/2, 0, pi/2, pi]);
+                xticklabels({'-\pi', '-\pi/2', '0', '\pi/2', '\pi'});
+                grid minor;
+                set(gca, 'fontsize', 20);
             end
         end
     end
