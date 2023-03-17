@@ -33,6 +33,7 @@ classdef Ring
             obj.dint = (obj.d2 / 2) * obj.mu.^2; % Normalized integrated dispersion
         end
 
+
         function [dseta, amu, theta] = numerical_simulation(obj, parameters, simulation_options, varargin)
             % Retrieve simulation options
             Effects = simulation_options("Effects"); % None or "Thermal" or "Avoided mode crossings"
@@ -101,6 +102,7 @@ classdef Ring
                 dy = [damu_; dtheta_];
             end
         end
+
 
         function plot_results(obj, dseta_forward, amu_forward, dseta_snap, varargin)
              % Retrive backward values if available
