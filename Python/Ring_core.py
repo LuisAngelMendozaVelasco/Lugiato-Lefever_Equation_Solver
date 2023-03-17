@@ -68,19 +68,21 @@ class Ring:
         if Effects == 'Avoided mode crossings':
             self.dint[int(self.N / 2) + mode_perturbated] = 0 # Perturbate integrated dispersion
 
+        # Function for LLE and thermal equation
+        def LLE(tau, y): 
+            amu_ = y[:-1] # Retrieve field
+            theta_ = y[-1] # Retrieve variation of temperature
+            damu_ = -(1 + 1j * (dseta_current + dseta_step * (tau / tau_step) + self.dint) - aux * theta_) * amu_ + 1j * ifft(np.abs(fft(amu_))**2 * fft(amu_)) + self.f # LLE
+            dtheta_ = (2 / (self.kappa * tauT)) * ((n2T / self.n2) * np.sum(np.abs(amu_)**2) - theta_) # Thermal equation
+            dy = np.insert(damu_, self.N, dtheta_)
+            
+            return dy 
+
         # Iterate over all detuning values
         print('{} tuning: '.format('Forward' if amu_forward.size == 0 else 'Backward')) # Indicate if forward or backward tuning simulation
         for i in tqdm(range(dseta.size - 1)):
             dseta_current = dseta[i] # Current detuning value
             y0 = np.insert(amu[i, :], self.N, theta[i]) # Initial conditions to solve LLE
-            if i == 0:
-                def LLE(tau, y): # Function for LLE and thermal equation
-                    amu_ = y[:-1] # Retrieve field
-                    theta_ = y[-1] # Retrieve variation of temperature
-                    damu_ = -(1 + 1j * (dseta_current + dseta_step * (tau / tau_step) + self.dint) - aux * theta_) * amu_ + 1j * ifft(np.abs(fft(amu_))**2 * fft(amu_)) + self.f # LLE
-                    dtheta_ = (2 / (self.kappa * tauT)) * ((n2T / self.n2) * np.sum(np.abs(amu_)**2) - theta_) # Thermal equation
-                    dy = np.insert(damu_, self.N, dtheta_)
-                    return dy 
             solution = solve_ivp(LLE, [0, tau_step], y0) # Solve LLE
             noise = ifft(np.sqrt(2 * self.g / self.kappa) * (np.random.randn(self.N) + np.random.randn(self.N) * 1j)) if Noise else 0 # White noise
             amu[i + 1, :] = solution.y[:-1, -1] + noise # Store field 
