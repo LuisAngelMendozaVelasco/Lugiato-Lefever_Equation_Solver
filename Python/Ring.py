@@ -5,8 +5,8 @@ import numpy as np
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 sns.set_style('whitegrid')
+
 
 class Ring:
     def __init__(self, ring_parameters) -> None:
@@ -47,6 +47,7 @@ class Ring:
         dseta_step = parameters['dseta_step'] # Tuning step
         roundtrips_step = parameters['roundtrips_step'] # Roundtrips per tuning step
         Amu0 = parameters['Amu0'] if 'Amu0' in parameters.keys() else None # Initial field
+
         if Effects == 'Thermal':
             theta0 = parameters['theta0'] if 'theta0' in parameters.keys() else None # Normalized initial variation of temperature
             tauT = parameters['tauT'] # Thermal relaxation time [s]
@@ -65,6 +66,7 @@ class Ring:
         theta = np.zeros(len(dseta), dtype=np.complex_) # 1D array to store initial normalized variation of temperature
         theta[0] = theta0 if theta_forward.size == 0 else theta_forward[np.abs(dseta_forward - dseta_start).argmin()] # Store initial normalized variation of temperature
         aux = 1j if Effects == 'Thermal' else 0 # Auxiliary variable to consider or not the variation of temperature
+
         if Effects == 'Avoided mode crossings':
             self.dint[int(self.N / 2) + mode_perturbated] = 0 # Perturbate integrated dispersion
 
@@ -80,11 +82,12 @@ class Ring:
 
         # Iterate over all detuning values
         print('{} tuning: '.format('Forward' if amu_forward.size == 0 else 'Backward')) # Indicate if forward or backward tuning simulation
+        
         for i in tqdm(range(dseta.size - 1)):
             dseta_current = dseta[i] # Current detuning value
             y0 = np.insert(amu[i, :], self.N, theta[i]) # Initial conditions to solve LLE
-            solution = solve_ivp(LLE, [0, tau_step], y0) # Solve LLE
-            noise = ifft(np.sqrt(2 * self.g / self.kappa) * (np.random.randn(self.N) + np.random.randn(self.N) * 1j)) if Noise else 0 # White noise
+            solution = solve_ivp(LLE, [0, tau_step], y0, method='DOP853') # Solve LLE
+            noise = ifft(np.sqrt(2 * self.g / self.kappa) * (np.random.randn(self.N) + 1j * np.random.randn(self.N))) if Noise else 0 # White noise
             amu[i + 1, :] = solution.y[:-1, -1] + noise # Store field 
             theta[i + 1] = solution.y[-1, -1] # Store variation of temperature
         
@@ -92,7 +95,7 @@ class Ring:
 
 
     def plot_results(self, dseta_forward, amu_forward, dseta_backward=np.array([]), amu_backward=np.array([]), dseta_snap=0):
-        fig = plt.figure(figsize=(14, 14))
+        fig = plt.figure(figsize=(12, 12))
         plt.rcParams['font.size'] = '18'
 
         # Plot average intracavity intensity
@@ -101,9 +104,9 @@ class Ring:
         ax1 = plt.subplot(311)
         ax1.plot(dseta_forward, avg_intr_int_fwrd, label='Forward tuning', color='blue')
         ax1.plot(dseta_backward, avg_intr_int_bwrd, label='Backward tuning', color='red') if amu_backward.size != 0 else None
-        ax1.axvline(dseta_snap, color='black', linestyle='--', label='$\zeta$ = {}'.format(dseta_snap))
-        ax1.set_xlabel('Normalized detuning, $\zeta$')
-        ax1.set_ylabel('Average intracavity intensity [a. u.]')
+        ax1.axvline(dseta_snap, color='black', linestyle='--', label=r'$\zeta$ = {:.2f}'.format(dseta_snap))
+        ax1.set_xlabel(r'Normalized detuning, $\zeta$')
+        ax1.set_ylabel('Average intracavity \n intensity [a. u.]')
         ax1.set_xlim(np.min(dseta_forward), np.max(dseta_forward))
         ax1.set_ylim(0, np.max(avg_intr_int_fwrd) * 1.05)
         ax1.legend(loc='upper left')
@@ -118,7 +121,7 @@ class Ring:
             optical_spectrum = 10 * np.log10(1000 * optical_spectrum) # Optical spectrum [dBm]
 
             ax.stem(freqmu * 1e-12, optical_spectrum, markerfmt=",", bottom=-30, linefmt=line_color)
-            ax.set_xlabel('Resonance frequencies [THz], $f_\mu$')
+            ax.set_xlabel(r'Resonance frequencies [THz], $f_\mu$')
             ax.set_ylabel('Optical spectrum [dBm]')
             ax.set_xlim(freqmu[0] * 1e-12, freqmu[-1] * 1e-12)
             ax.set_ylim(-30, 10 * np.log10(1000 * self.Pin) * 1.05)
@@ -131,12 +134,12 @@ class Ring:
             intracavity_power = np.abs(fft(temp))**2 # Intracavity power [a. u.]
 
             ax.plot(ring_circumference, intracavity_power, color=line_color)
-            ax.set_xlabel('Ring circumference [rad], $\phi$')
+            ax.set_xlabel(r'Ring circumference [rad], $\phi$')
             ax.set_ylabel('Intracavity power [a. u]')
             ax.set_xlim(-pi, pi)
             ax.set_ylim(0, np.max(intracavity_power) * 1.05)
             ax.set_xticks([-pi, -pi/2, 0, pi/2, pi])
-            ax.set_xticklabels(['$-\pi$', '$-\pi$/2', '0', '$\pi$/2', '$\pi$'])
+            ax.set_xticklabels([r'$-\pi$', r'$-\pi$/2', '0', r'$\pi$/2', r'$\pi$'])
 
         # Plot forward optical spectrum
         ax2 = plt.subplot(312) if amu_backward.size == 0 else plt.subplot(323)
