@@ -5,6 +5,7 @@ classdef Ring
         N; n0; n2; FSR; lambda0; kappa; eta; Veff; D2; Pin; Tr; freq0; omega0; g; f; d2; mu; dint;
     end
 
+   
     methods
         function obj = Ring(ring_parameters)
             % Retrieve ring parameters
@@ -45,6 +46,7 @@ classdef Ring
             dseta_step = parameters('dseta_step'); % Tuning step
             roundtrips_step = parameters('roundtrips_step'); % Roundtrips per tuning step
             if isKey(parameters, 'Amu0'); Amu0 = parameters('Amu0'); else; Amu0 = NaN; end % Initial field
+
             if Effects == "Thermal"
                 if isKey(parameters, 'theta0'); theta0 = parameters('theta0'); else; theta0 = NaN; end % Normalized initial variation of temperature
                 tauT = parameters("tauT"); % Thermal relaxation time [s]
@@ -79,22 +81,41 @@ classdef Ring
             if isempty(amu_forward); tuning = "FORWARD"; else; tuning = "BACKWARD"; end
             fprintf("%s TUNING: \n", tuning); % Indicate if forward or backward tuning simulation
             progress = 0; % Variable to store simulation progress
-            disp(['Progress: ', num2str(progress), '%']); % Display simulation progress
-            for i = 1 : (length(dseta) - 1)
-                current_progress = round(i / (length(dseta) - 1) * 100); % Current simulation progress
+            wb = waitbar(0, '0.0%', 'Name', 'Simulation progress', 'CreateCancelBtn', 'setappdata(gcbf, ''canceling'', 1)');
+            setappdata(wb, 'canceling', 0);
+            fprintf("In progress...\n");
+            steps = length(dseta) - 1;
+
+            for i = 1 : steps
+                % Check for clicked Cancel button
+                if getappdata(wb, 'canceling')
+                    fprintf("Canceled!\n");
+                    delete(wb);
+                    break
+                end
+
+                current_progress = round(i / steps * 100, 1); % Current simulation progress
+
+                % Update waitbar and message
                 if progress < current_progress
                     progress = current_progress; % Update simulation progress
-                    disp(['Progress: ', num2str(progress), '%']); % Display simulation progress
+                    waitbar(i/steps, wb, strcat(sprintf('%.1f', progress), "%"))
                 end
+
                 dseta_current = dseta(i); % Current detuning value
                 y0 = [amu(i, :), theta(i)]; % Initial conditions to solve LLE
-                [~, y] = ode45(@CMEs, [0, tau_step], y0); % Solve LLE
+                [~, y] = ode78(@LLE, [0, tau_step], y0); % Solve LLE
                 if Noise == "true"; noise = ifft(sqrt(2 * obj.g / obj.kappa) * (randn(1, obj.N) + 1i * randn(1, obj.N))); else; noise = 0; end % White noise
                 amu(i + 1, :) = y(end, 1 : end - 1) + noise; % Store field
                 theta(i + 1) = y(end, end); % Store variation of temperature
+
+                if i == steps
+                    fprintf("Completed!\n");
+                    delete(wb);
+                end
             end
 
-            function dy = CMEs(tau, y) % Function for LLE and thermal equation
+            function dy = LLE(tau, y) % Function for LLE and thermal equation
                 amu_ = y(1 : end - 1); % Retrieve field
                 theta_ = y(end); % Retrieve variation of temperature
                 damu_ = -(1 + 1i * (dseta_current + dseta_step * (tau / tau_step) + obj.dint.') - aux * theta_) .* amu_ + 1i * ifft(abs(fft(amu_)).^2 .* fft(amu_)) + obj.f.'; % LLE
@@ -123,14 +144,16 @@ classdef Ring
             subplot(3, 2, 1:2);
             plot(dseta_forward, avg_intr_int_fwrd, Color="b", LineWidth=2);
             hold on;
+
             if ~isempty(avg_intr_int_bwrd)
                 plot(dseta_backward, avg_intr_int_bwrd, Color="r", LineWidth=2);
                 xline(dseta_snap, Color="k", LineStyle="--", LineWidth=2);
                 legend({'Forward tuning', 'Backward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northwest");
             else
                 xline(dseta_snap, Color="k", LineStyle="--", LineWidth=2);
-                legend({'Forward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northeast");
+                legend({'Forward tuning', ['\zeta_0 = ', num2str(dseta_snap)]}, Location="northwest");
             end
+
             xlabel('Normalized detuning, $\zeta$', 'interpreter', 'latex');
             ylabel({'Average intracavity'; 'intensity [a. u.]'}); 
             xlim([min(dseta_forward), max(dseta_forward)]);
