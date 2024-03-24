@@ -4,12 +4,8 @@ The Lugiato-Lefever Equation (LLE) was developed to provide a description of spa
 
 In optical microresonators, Dissipative Kerr Solitons (DKS) are solutions to the Lugiato-Lefever equation where the cavity loss is balanced by a Continuous Wave (CW) laser and its associated parametric gain. DKS represent stable, self-reinforcing intracavity light patterns that enable fully coherent optical frequency combs, promoting their practical applications. Simulations based on the LLE formalism have allowed the creation of models that quantitatively agree with reported experimental results on DKS generation, such as multiple-soliton, single-soliton, and soliton crystal. 
 
-<figure>
-    <img src="./images/formation_of_DKS.png">
-    <figcaption style="text-align:center;">
-        The principle of microresonator frequency comb generation and the formation of DKS.
-    </figcaption>
-</figure>
+![](./images/formation_of_DKS.png)
+***The principle of microresonator frequency comb generation and the formation of DKS.***
 
 The great potential of microresonator frequency combs in a wide variety of applications suggests the need for efficient and widely accesible computational tools to accelerate their development. Two different software implementations of a LLE solver for microcomb modeling are presented here, one using Python and the other using MATLAB®.
 
