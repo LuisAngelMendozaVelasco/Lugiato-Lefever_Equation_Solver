@@ -5,7 +5,7 @@ classdef Ring
         N; n0; n2; FSR; lambda0; kappa; eta; Veff; D2; Pin; Tr; freq0; omega0; g; f; d2; mu; dint;
     end
 
-   
+
     methods
         function obj = Ring(ring_parameters)
             % Retrieve ring parameters
@@ -126,14 +126,14 @@ classdef Ring
 
 
         function plot_results(obj, dseta_forward, amu_forward, dseta_snap, varargin)
-             % Retrive backward values if available
+            % Retrive backward values if available
             try
                 dseta_backward = varargin{1};
                 amu_backward = varargin{2};
             catch
                 [dseta_backward, amu_backward] = deal([], []);
             end
- 
+
             figure();
             set(gcf, 'Units', 'Normalized', 'OuterPosition', [0 0 1 1]); %Set figure size
 
