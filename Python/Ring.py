@@ -61,9 +61,9 @@ class Ring:
         # Calculate further parameters
         dseta = np.arange(dseta_start, dseta_end + dseta_step, dseta_step) # Normalized detuning (vector)
         tau_step = (self.kappa / 2) * self.Tr * roundtrips_step # Normalized time per tuning step
-        amu = np.zeros((dseta.size, self.N), dtype=np.complex_) # 2D array to store normalized fields
+        amu = np.zeros((dseta.size, self.N), dtype=np.complex128) # 2D array to store normalized fields
         amu[0, :] = ifft(np.sqrt(2 * self.g / self.kappa) * Amu0) if amu_forward.size == 0 else amu_forward[np.abs(dseta_forward - dseta_start).argmin(), :] # Store normalized initial field
-        theta = np.zeros(len(dseta), dtype=np.complex_) # 1D array to store initial normalized variation of temperature
+        theta = np.zeros(len(dseta), dtype=np.complex128) # 1D array to store initial normalized variation of temperature
         theta[0] = theta0 if theta_forward.size == 0 else theta_forward[np.abs(dseta_forward - dseta_start).argmin()] # Store initial normalized variation of temperature
         aux = 1j if Effects == 'Thermal' else 0 # Auxiliary variable to consider or not the variation of temperature
 
@@ -129,7 +129,7 @@ class Ring:
         def plot_intracavity_power(dseta, amu, dseta_snap, ax, line_color='blue'):
             index = np.abs(dseta - dseta_snap).argmin() # Index of dseta_snap value in dseta
             ring_circumference = np.linspace(-pi, pi, 4096) # Ring circumference from -pi to pi
-            temp = np.zeros_like(ring_circumference, dtype=np.complex_)
+            temp = np.zeros_like(ring_circumference, dtype=np.complex128)
             temp[np.int32(self.mu + (4096 / 2) + 1)] = amu[index, :] # Improve resolution considering more sampling points
             intracavity_power = np.abs(fft(temp))**2 # Intracavity power [a. u.]
 
